@@ -29,6 +29,8 @@ export function createPool(config: DbConfig, extra: PoolOptions = {}): Pool {
     connectionLimit: 10,
     dateStrings: true,
     decimalNumbers: true, // SUM() regresa numero y no texto
+    // MySQL en la nube: DB_SSL=true activa TLS (valida el certificado del servidor)
+    ...(process.env.DB_SSL === "true" ? { ssl: { minVersion: "TLSv1.2", rejectUnauthorized: true } } : {}),
     ...extra,
   });
   // fechas siempre en utc
