@@ -35,6 +35,18 @@ export const productSchema = z.object({
     .refine((v) => v === null || (Number.isInteger(v) && v >= 0), "Stock inválido"),
 });
 
+// foto del producto: llega ya reducida desde el navegador como data URL
+export const MAX_IMAGE_CHARS = 700_000;
+const IMAGE_RE = /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/]+={0,2}$/;
+
+export function parseImageData(raw: unknown): { ok: true; value: string | null } | { ok: false; error: string } {
+  const v = typeof raw === "string" ? raw.trim() : "";
+  if (v === "") return { ok: true, value: null };
+  if (v.length > MAX_IMAGE_CHARS) return { ok: false, error: "La imagen es demasiado grande." };
+  if (!IMAGE_RE.test(v)) return { ok: false, error: "Formato de imagen no válido." };
+  return { ok: true, value: v };
+}
+
 export const ORDER_STATUSES = ["pendiente", "preparando", "listo", "entregado", "cancelado"] as const;
 export type OrderStatus = (typeof ORDER_STATUSES)[number];
 export type Role = "student" | "staff" | "admin";

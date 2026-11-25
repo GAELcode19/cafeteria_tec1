@@ -5,6 +5,9 @@ import { getDb } from "@/lib/db";
 import { getMenu } from "@/lib/menu";
 import { formatMXN } from "@/lib/money";
 import { NewProductForm } from "@/components/product-form";
+import { ImagePicker } from "@/components/image-picker";
+import { ProductThumb } from "@/components/product-thumb";
+import { productImageUrl } from "@/lib/menu";
 import { setStockAction, toggleAvailabilityAction, updateProductAction } from "@/app/actions/admin";
 
 export const metadata: Metadata = { title: "Productos" };
@@ -37,9 +40,12 @@ async function Products() {
             {products.map((p) => (
               <li key={p.id} className="card grid gap-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className={p.available ? "font-semibold" : "font-semibold text-muted line-through"}>
-                    {p.emoji} {p.name} · {formatMXN(p.price_cents)}
-                  </p>
+                  <div className="flex items-center gap-3">
+                    <ProductThumb product={p} size="sm" />
+                    <p className={p.available ? "font-semibold" : "font-semibold text-muted line-through"}>
+                      {p.name} · {formatMXN(p.price_cents)}
+                    </p>
+                  </div>
                   <div className="flex flex-wrap items-center gap-2">
                     {/* cambiar stock */}
                     <form action={setStockAction} className="flex items-center gap-2">
@@ -78,6 +84,9 @@ async function Products() {
                       <input name="stock" defaultValue={p.stock ?? ""} className="input" aria-label="Stock" placeholder="Stock (vacío = ilimitado)" />
                       <input name="emoji" defaultValue={p.emoji} className="input" aria-label="Emoji" />
                       <input name="description" defaultValue={p.description} className="input" aria-label="Descripción" />
+                      <div className="sm:col-span-2">
+                        <ImagePicker key={p.image_at ?? 0} initialUrl={productImageUrl(p)} />
+                      </div>
                       <button className="btn-primary sm:col-span-2">Guardar cambios</button>
                     </form>
                   </details>

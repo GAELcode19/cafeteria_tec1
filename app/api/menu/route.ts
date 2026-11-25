@@ -1,6 +1,6 @@
 import { connection } from "next/server";
 import { getDb } from "@/lib/db";
-import { getMenu, isSoldOut } from "@/lib/menu";
+import { getMenu, isSoldOut, productImageUrl } from "@/lib/menu";
 
 // menu publico en json, solo productos visibles
 export async function GET() {
@@ -14,6 +14,7 @@ export async function GET() {
       description: p.description,
       priceCents: p.price_cents,
       emoji: p.emoji,
+      imageUrl: productImageUrl(p),
       soldOut: isSoldOut(p),
     })),
   }));

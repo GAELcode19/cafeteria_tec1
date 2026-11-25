@@ -103,6 +103,8 @@ export const SCHEMA: string[] = [
     emoji VARCHAR(16) NOT NULL DEFAULT '🍽️',
     stock INT UNSIGNED NULL,
     available TINYINT(1) NOT NULL DEFAULT 1,
+    image_data MEDIUMTEXT NULL,
+    image_at INT UNSIGNED NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     KEY idx_products_category (category_id),
     CONSTRAINT fk_products_category FOREIGN KEY (category_id) REFERENCES categories(id)
@@ -133,8 +135,27 @@ export const SCHEMA: string[] = [
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
 ];
 
+// columnas agregadas despues de la primera version: se crean si la tabla ya existia
+const PRODUCT_COLUMNS: [string, string][] = [
+  ["image_data", "MEDIUMTEXT NULL"],
+  ["image_at", "INT UNSIGNED NULL"],
+];
+
 export async function ensureSchema(pool: Pool): Promise<void> {
   for (const stmt of SCHEMA) await pool.query(stmt);
+  for (const [column, definition] of PRODUCT_COLUMNS) {
+    const [rows] = await pool.query(
+      "SELECT COUNT(*) AS n FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'products' AND COLUMN_NAME = ?",
+      [column],
+    );
+    if (Number((rows as { n: number }[])[0].n) > 0) continue;
+    try {
+      await pool.query(`ALTER TABLE products ADD COLUMN ${column} ${definition}`);
+    } catch (e) {
+      // otra instancia la creo al mismo tiempo (error 1060: columna duplicada)
+      if ((e as { errno?: number }).errno !== 1060) throw e;
+    }
+  }
 }
 
 // orden para borrar, primero las tablas hijas

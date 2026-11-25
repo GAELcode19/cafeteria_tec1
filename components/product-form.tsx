@@ -1,11 +1,19 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { createProductAction } from "@/app/actions/admin";
 import type { Category } from "@/lib/menu";
+import { ImagePicker } from "./image-picker";
 
 export function NewProductForm({ categories }: { categories: Category[] }) {
   const [state, action, pending] = useActionState(createProductAction, undefined);
+  // al guardar bien, se limpia la foto elegida
+  const [pickerKey, setPickerKey] = useState(0);
+  const wasPending = useRef(false);
+  useEffect(() => {
+    if (wasPending.current && !pending && !state?.error) setPickerKey((k) => k + 1);
+    wasPending.current = pending;
+  }, [pending, state]);
   return (
     <form action={action} className="card grid gap-3 sm:grid-cols-2">
       <h2 className="text-lg font-semibold sm:col-span-2">Nuevo producto</h2>
@@ -36,6 +44,9 @@ export function NewProductForm({ categories }: { categories: Category[] }) {
       <div>
         <label htmlFor="np-desc" className="label">Descripción</label>
         <input id="np-desc" name="description" className="input" maxLength={200} />
+      </div>
+      <div className="sm:col-span-2">
+        <ImagePicker key={pickerKey} />
       </div>
       {state?.error && (
         <p role="alert" className="text-sm font-medium text-danger sm:col-span-2">{state.error}</p>

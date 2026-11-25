@@ -4,6 +4,7 @@ import { getDb } from "@/lib/db";
 import { getMenu, isSoldOut } from "@/lib/menu";
 import { formatMXN } from "@/lib/money";
 import { AddToCart } from "@/components/add-to-cart";
+import { ProductThumb } from "@/components/product-thumb";
 
 export default function Home() {
   return (
@@ -46,9 +47,7 @@ async function Menu() {
               const soldOut = isSoldOut(p);
               return (
                 <li key={p.id} className="card flex items-center gap-4">
-                  <span className="text-4xl" aria-hidden>
-                    {p.emoji}
-                  </span>
+                  <ProductThumb product={p} />
                   <div className="min-w-0 flex-1">
                     <h3 className="font-semibold">{p.name}</h3>
                     <p className="text-sm text-muted">{p.description}</p>

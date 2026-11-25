@@ -5,7 +5,7 @@ import { getDb } from "@/lib/db";
 import { requireRole } from "@/lib/auth";
 import { parsePriceToCents } from "@/lib/money";
 import { one, run } from "@/lib/sql";
-import { productSchema } from "@/lib/validation";
+import { parseImageData, productSchema } from "@/lib/validation";
 import type { FormState } from "./auth";
 
 function parseProduct(formData: FormData) {
@@ -19,8 +19,13 @@ function parseProduct(formData: FormData) {
   if (!parsed.success) return { error: parsed.error.issues[0].message } as const;
   const price = parsePriceToCents(String(formData.get("price") ?? ""));
   if (price === null) return { error: "Precio no válido." } as const;
-  return { data: parsed.data, price } as const;
+  const img = parseImageData(formData.get("imageData"));
+  if (!img.ok) return { error: img.error } as const;
+  const removeImage = formData.get("removeImage") === "1";
+  return { data: parsed.data, price, image: img.value, removeImage } as const;
 }
+
+const nowSeconds = () => Math.floor(Date.now() / 1000);
 
 export async function createProductAction(_: FormState, formData: FormData): Promise<FormState> {
   await requireRole("admin");
@@ -32,8 +37,17 @@ export async function createProductAction(_: FormState, formData: FormData): Pro
   }
   await run(
     db,
-    "INSERT INTO products (category_id, name, description, price_cents, emoji, stock) VALUES (?, ?, ?, ?, ?, ?)",
-    [r.data.categoryId, r.data.name, r.data.description, r.price, r.data.emoji, r.data.stock],
+    "INSERT INTO products (category_id, name, description, price_cents, emoji, stock, image_data, image_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+    [
+      r.data.categoryId,
+      r.data.name,
+      r.data.description,
+      r.price,
+      r.data.emoji,
+      r.data.stock,
+      r.image,
+      r.image ? nowSeconds() : null,
+    ],
   );
   revalidatePath("/", "layout");
   return undefined;
@@ -44,10 +58,19 @@ export async function updateProductAction(formData: FormData): Promise<void> {
   const id = Number(formData.get("id"));
   const r = parseProduct(formData);
   if (!Number.isInteger(id) || "error" in r) return;
+  // foto nueva la reemplaza, "quitar" la borra y sin cambios se conserva la actual
+  let imageSql = "";
+  const imageParams: unknown[] = [];
+  if (r.image) {
+    imageSql = ", image_data=?, image_at=?";
+    imageParams.push(r.image, nowSeconds());
+  } else if (r.removeImage) {
+    imageSql = ", image_data=NULL, image_at=NULL";
+  }
   await run(
     await getDb(),
-    "UPDATE products SET category_id=?, name=?, description=?, price_cents=?, emoji=?, stock=? WHERE id=?",
-    [r.data.categoryId, r.data.name, r.data.description, r.price, r.data.emoji, r.data.stock, id],
+    `UPDATE products SET category_id=?, name=?, description=?, price_cents=?, emoji=?, stock=?${imageSql} WHERE id=?`,
+    [r.data.categoryId, r.data.name, r.data.description, r.price, r.data.emoji, r.data.stock, ...imageParams, id],
   );
   revalidatePath("/", "layout");
 }
